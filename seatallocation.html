@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seat Allocation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            width: 80%;
+            margin: 0 auto;
+            padding-top: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: bold;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #1e90ff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .confirmation {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 18px;
+            color: green;
+        }
+        .warning {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 18px;
+            color: red;
+        }
+        .seating-arrangement {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        .desk {
+            display: grid;
+            grid-template-columns: repeat(3, 50px);
+            grid-template-rows: repeat(2, 50px);
+            gap: 5px;
+            background: #ddd;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .seat {
+            width: 50px;
+            height: 50px;
+            background-color: #ccc;
+            text-align: center;
+            line-height: 50px;
+            font-size: 12px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .seat.selected {
+            background-color: #1e90ff;
+            color: white;
+        }
+        .seat.allocated {
+            background-color: #32cd32;
+            color: white;
+            cursor: not-allowed;
+        }
+        .desk-label {
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h1>Seat Allocation</h1>
+            <p>Please fill in the details to allocate a seat.</p>
+        </div>
+
+        <!-- Employee ID Inputs -->
+        <div id="employeeInputs">
+            <!-- Inputs will be dynamically generated -->
+        </div>
+
+        <button id="allocateSeatBtn">Allocate Seat</button>
+
+        <!-- Confirmation Message -->
+        <div class="confirmation" id="confirmationMessage" style="display: none;">
+            <p>Seats allocated successfully!</p>
+        </div>
+
+        <div class="warning" id="warningMessage" style="display: none;">
+            <p>Teams 1, 3, and 5 can only select the Morning Shift.</p>
+        </div>
+
+        <!-- Seating Arrangement -->
+        <div class="seating-arrangement" id="seatingArrangement">
+            <!-- Seats will be dynamically generated -->
+        </div>
+    </div>
+
+    <script>
+        function generateSeatsForShift(start, end) {
+            const seatingContainer = document.getElementById('seatingArrangement');
+            seatingContainer.innerHTML = '';  // Clear previous seats
+            const selectedSeats = JSON.parse(localStorage.getItem('selectedSeats')) || [];
+            const allocatedSeats = JSON.parse(localStorage.getItem('allocatedSeats')) || {};
+
+            let deskCounter = 1;
+            for (let i = start; i <= end; i += 6) {
+                const desk = document.createElement('div');
+                desk.classList.add('desk');
+
+                const deskLabel = document.createElement('div');
+                deskLabel.classList.add('desk-label');
+                deskLabel.textContent = `Desk ${deskCounter}`;
+                deskCounter++;
+
+                for (let j = i; j < i + 6 && j <= end; j++) {
+                    const seat = document.createElement('div');
+                    seat.classList.add('seat');
+                    seat.textContent = j;
+                    seat.dataset.seatNumber = j;
+
+                    // If the seat is selected by the user, mark it as selected
+                    if (selectedSeats.includes(j.toString())) {
+                        seat.classList.add('selected');
+                    }
+                    // If the seat is already allocated, mark it as allocated and show the employee ID
+                    if (allocatedSeats[j]) {
+                        seat.classList.add('allocated');
+                        seat.textContent = allocatedSeats[j];  // Show Employee ID
+                    }
+
+                    desk.appendChild(seat);
+                }
+
+                seatingContainer.appendChild(deskLabel);
+                seatingContainer.appendChild(desk);
+            }
+        }
+
+        function populateEmployeeInputs() {
+            const selectedSeats = JSON.parse(localStorage.getItem('selectedSeats')) || [];
+            const employeeInputs = document.getElementById('employeeInputs');
+            employeeInputs.innerHTML = '';
+
+            selectedSeats.forEach((seat, index) => {
+                const div = document.createElement('div');
+                div.classList.add('form-group');
+
+                const label = document.createElement('label');
+                label.textContent = `Employee ID for Seat ${seat}:`;
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.placeholder = `Enter Employee ID for seat ${seat}`;
+                input.required = true;
+                input.pattern = '\\d{4}';  // Ensure it matches a 4-digit number
+                input.title = "Employee ID must be a 4-digit number";  // Tooltip message
+
+                div.appendChild(label);
+                div.appendChild(input);
+                employeeInputs.appendChild(div);
+            });
+        }
+
+        const allocateSeatBtn = document.getElementById('allocateSeatBtn');
+        allocateSeatBtn.addEventListener('click', () => {
+            const selectedSeats = JSON.parse(localStorage.getItem('selectedSeats')) || [];
+            const inputs = document.querySelectorAll('#employeeInputs input');
+            const allocatedSeats = JSON.parse(localStorage.getItem('allocatedSeats')) || {};
+            const existingEmployeeIds = new Set(Object.values(allocatedSeats));
+
+            let allFilled = true;
+            let duplicateIdFound = false;
+
+            inputs.forEach((input, index) => {
+                const employeeId = input.value.trim();
+
+                if (!employeeId || !/^\d{4}$/.test(employeeId)) {
+                    allFilled = false;
+                } else if (existingEmployeeIds.has(employeeId)) {
+                    duplicateIdFound = true;  // Duplicate Employee ID
+                    allFilled = false;
+                    alert(`Employee ID ${employeeId} has already been allocated a seat.`);
+                } else {
+                    allocatedSeats[selectedSeats[index]] = employeeId;
+                    existingEmployeeIds.add(employeeId);  // Prevent this ID from being reused
+                }
+            });
+
+            if (duplicateIdFound) {
+                alert('Please ensure all employee IDs are unique and valid.');
+            }
+
+            if (allFilled && !duplicateIdFound) {
+                localStorage.setItem('allocatedSeats', JSON.stringify(allocatedSeats));
+                document.getElementById('confirmationMessage').style.display = 'block';
+                localStorage.removeItem('selectedSeats'); // Clear after allocation
+                generateSeatsForShift(1, 1000); // Refresh UI
+            } else if (!duplicateIdFound) {
+                alert('Please ensure all employee IDs are unique and valid.');
+            }
+        });
+
+        window.onload = () => {
+            generateSeatsForShift(1, 1000);
+            populateEmployeeInputs();
+        };
+    </script>
+
+</body>
+</html>
